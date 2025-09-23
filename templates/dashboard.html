@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+
+{% block page_title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="mb-8">
+    <h2 class="text-3xl font-bold text-gray-800 mb-2">Dashboard</h2>
+    <p class="text-gray-600">Visão geral do controle de estoque</p>
+</div>
+
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+    <!-- Total de Produtos -->
+    <div class="bg-white rounded-lg shadow p-6">
+        <div class="flex items-center">
+            <div class="p-3 rounded-full bg-blue-100 text-blue-600">
+                <i class="fas fa-box text-2xl"></i>
+            </div>
+            <div class="ml-4">
+                <h3 class="text-lg font-semibold text-gray-700">Total de Produtos</h3>
+                <p class="text-2xl font-bold text-gray-900">{{ total_produtos or 0 }}</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Entradas Hoje -->
+    <div class="bg-white rounded-lg shadow p-6">
+        <div class="flex items-center">
+            <div class="p-3 rounded-full bg-green-100 text-green-600">
+                <i class="fas fa-arrow-down text-2xl"></i>
+            </div>
+            <div class="ml-4">
+                <h3 class="text-lg font-semibold text-gray-700">Entradas Hoje</h3>
+                <p class="text-2xl font-bold text-gray-900">{{ entradas_hoje or 0 }}</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Saídas Hoje -->
+    <div class="bg-white rounded-lg shadow p-6">
+        <div class="flex items-center">
+            <div class="p-3 rounded-full bg-red-100 text-red-600">
+                <i class="fas fa-arrow-up text-2xl"></i>
+            </div>
+            <div class="ml-4">
+                <h3 class="text-lg font-semibold text-gray-700">Saídas Hoje</h3>
+                <p class="text-2xl font-bold text-gray-900">{{ saidas_hoje or 0 }}</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Produtos com Estoque Baixo -->
+    <div class="bg-white rounded-lg shadow p-6">
+        <div class="flex items-center">
+            <div class="p-3 rounded-full bg-yellow-100 text-yellow-600">
+                <i class="fas fa-exclamation-triangle text-2xl"></i>
+            </div>
+            <div class="ml-4">
+                <h3 class="text-lg font-semibold text-gray-700">Estoque Baixo</h3>
+                <p class="text-2xl font-bold text-gray-900">{{ estoque_baixo or 0 }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Ações Rápidas -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+    <a href="{{ url_for('novo_produto') }}" class="bg-green-600 hover:bg-green-700 text-white p-4 rounded-lg text-center transition duration-200">
+        <i class="fas fa-plus mb-2 text-xl"></i>
+        <p class="font-semibold">Novo Produto</p>
+    </a>
+    
+    <a href="{{ url_for('nova_entrada') }}" class="bg-blue-600 hover:bg-blue-700 text-white p-4 rounded-lg text-center transition duration-200">
+        <i class="fas fa-arrow-down mb-2 text-xl"></i>
+        <p class="font-semibold">Nova Entrada</p>
+    </a>
+    
+    <a href="{{ url_for('nova_saida') }}" class="bg-red-600 hover:bg-red-700 text-white p-4 rounded-lg text-center transition duration-200">
+        <i class="fas fa-arrow-up mb-2 text-xl"></i>
+        <p class="font-semibold">Nova Saída</p>
+    </a>
+    
+    <a href="{{ url_for('relatorios') }}" class="bg-purple-600 hover:bg-purple-700 text-white p-4 rounded-lg text-center transition duration-200">
+        <i class="fas fa-file-pdf mb-2 text-xl"></i>
+        <p class="font-semibold">Gerar Relatório</p>
+    </a>
+</div>
+
+<!-- Produtos Recentes -->
+<div class="bg-white rounded-lg shadow">
+    <div class="px-6 py-4 border-b border-gray-200">
+        <h3 class="text-lg font-semibold text-gray-800">Produtos Cadastrados</h3>
+    </div>
+    <div class="p-6">
+        <div class="text-center text-gray-500">
+            <i class="fas fa-box text-4xl mb-4"></i>
+            <p>Nenhum produto cadastrado ainda</p>
+            <a href="{{ url_for('novo_produto') }}" class="inline-block mt-4 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition duration-200">
+                Cadastrar Primeiro Produto
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

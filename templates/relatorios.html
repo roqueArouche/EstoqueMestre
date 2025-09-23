@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+
+{% block page_title %}Relatórios{% endblock %}
+
+{% block content %}
+<div class="mb-8">
+    <h2 class="text-3xl font-bold text-gray-800 mb-2">Relatórios</h2>
+    <p class="text-gray-600">Gere relatórios do controle de estoque</p>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+    <!-- Gerar Relatório PDF -->
+    <div class="bg-white rounded-lg shadow p-6">
+        <div class="flex items-center mb-4">
+            <div class="p-3 rounded-full bg-red-100 text-red-600 mr-4">
+                <i class="fas fa-file-pdf text-2xl"></i>
+            </div>
+            <div>
+                <h3 class="text-xl font-semibold text-gray-800">Relatório de Estoque</h3>
+                <p class="text-gray-600">Gere relatório completo em PDF</p>
+            </div>
+        </div>
+        
+        <form action="{{ url_for('gerar_relatorio_pdf') }}" method="GET" class="space-y-4">
+            <div>
+                <label for="data_inicio" class="block text-sm font-medium text-gray-700 mb-2">Data Inicial</label>
+                <input type="date" id="data_inicio" name="data_inicio" required
+                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500">
+            </div>
+            
+            <div>
+                <label for="data_fim" class="block text-sm font-medium text-gray-700 mb-2">Data Final</label>
+                <input type="date" id="data_fim" name="data_fim" required
+                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500">
+            </div>
+            
+            <button type="submit" 
+                    class="w-full bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition duration-200">
+                <i class="fas fa-download mr-2"></i>
+                Gerar Relatório PDF
+            </button>
+        </form>
+        
+        <div class="mt-4 p-4 bg-blue-50 rounded-lg">
+            <h4 class="font-semibold text-blue-800 mb-2">O relatório inclui:</h4>
+            <ul class="text-sm text-blue-700 space-y-1">
+                <li>• Cabeçalho da JIQUIAGROPECUÁRIA</li>
+                <li>• Estoque inicial por produto</li>
+                <li>• Total de entradas no período</li>
+                <li>• Total de saídas no período</li>
+                <li>• Estoque atual atualizado</li>
+                <li>• Campo para assinatura do responsável</li>
+            </ul>
+        </div>
+    </div>
+    
+    <!-- Resumo Rápido -->
+    <div class="bg-white rounded-lg shadow p-6">
+        <div class="flex items-center mb-4">
+            <div class="p-3 rounded-full bg-green-100 text-green-600 mr-4">
+                <i class="fas fa-chart-bar text-2xl"></i>
+            </div>
+            <div>
+                <h3 class="text-xl font-semibold text-gray-800">Resumo do Estoque</h3>
+                <p class="text-gray-600">Visão geral atual</p>
+            </div>
+        </div>
+        
+        <div class="space-y-4">
+            <div class="flex justify-between items-center p-3 bg-gray-50 rounded">
+                <span class="text-gray-700">Total de Produtos</span>
+                <span class="font-semibold text-gray-900">{{ total_produtos or 0 }}</span>
+            </div>
+            
+            <div class="flex justify-between items-center p-3 bg-green-50 rounded">
+                <span class="text-green-700">Produtos em Estoque</span>
+                <span class="font-semibold text-green-800">{{ produtos_com_estoque or 0 }}</span>
+            </div>
+            
+            <div class="flex justify-between items-center p-3 bg-yellow-50 rounded">
+                <span class="text-yellow-700">Estoque Baixo</span>
+                <span class="font-semibold text-yellow-800">{{ produtos_estoque_baixo or 0 }}</span>
+            </div>
+            
+            <div class="flex justify-between items-center p-3 bg-red-50 rounded">
+                <span class="text-red-700">Sem Estoque</span>
+                <span class="font-semibold text-red-800">{{ produtos_sem_estoque or 0 }}</span>
+            </div>
+        </div>
+        
+        <div class="mt-6">
+            <a href="{{ url_for('produtos') }}" 
+               class="w-full inline-block text-center bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition duration-200">
+                <i class="fas fa-eye mr-2"></i>
+                Ver Detalhes dos Produtos
+            </a>
+        </div>
+    </div>
+</div>
+
+<script>
+// Definir data padrão (últimos 30 dias)
+document.addEventListener('DOMContentLoaded', function() {
+    const hoje = new Date();
+    const inicioMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+    
+    document.getElementById('data_inicio').value = inicioMes.toISOString().split('T')[0];
+    document.getElementById('data_fim').value = hoje.toISOString().split('T')[0];
+});
+</script>
+{% endblock %}

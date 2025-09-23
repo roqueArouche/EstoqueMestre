@@ -1,0 +1,273 @@
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, send_file
+from models import db, Produto, Entrada, Saida
+from datetime import datetime, date
+from reportlab.lib.pagesizes import A4
+from reportlab.lib import colors
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image
+from reportlab.lib.units import inch
+import os
+import io
+
+app = Flask(__name__)
+app.config['SECRET_KEY'] = os.environ.get('SESSION_SECRET', 'dev-secret-key')
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///estoque.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+db.init_app(app)
+
+
+@app.route('/')
+def index():
+    # Estatísticas para o dashboard
+    total_produtos = Produto.query.count()
+    
+    # Entradas e saídas de hoje
+    hoje = date.today()
+    entradas_hoje = Entrada.query.filter_by(data=hoje).count()
+    saidas_hoje = Saida.query.filter_by(data=hoje).count()
+    
+    # Produtos com estoque baixo (menos de 10 unidades)
+    produtos = Produto.query.all()
+    estoque_baixo = 0
+    for produto in produtos:
+        estoque = produto.calcular_estoque_atual()
+        if 0 < estoque <= 10:
+            estoque_baixo += 1
+    
+    return render_template('dashboard.html', 
+                         total_produtos=total_produtos,
+                         entradas_hoje=entradas_hoje,
+                         saidas_hoje=saidas_hoje,
+                         estoque_baixo=estoque_baixo)
+
+@app.route('/produtos')
+def produtos():
+    search = request.args.get('search', '')
+    if search:
+        produtos = Produto.query.filter(
+            Produto.nome.contains(search) | 
+            Produto.marca.contains(search)
+        ).all()
+    else:
+        produtos = Produto.query.all()
+    
+    # Calcular estoque atual para cada produto
+    produtos_com_estoque = []
+    for produto in produtos:
+        estoque_atual = produto.calcular_estoque_atual()
+        produtos_com_estoque.append({
+            'produto': produto,
+            'estoque_atual': estoque_atual
+        })
+    
+    return render_template('produtos.html', produtos=produtos_com_estoque, search=search)
+
+@app.route('/produtos/novo', methods=['GET', 'POST'])
+def novo_produto():
+    if request.method == 'POST':
+        nome = request.form['nome']
+        marca = request.form['marca']
+        formato = request.form['formato']
+        
+        produto = Produto(nome=nome, marca=marca, formato=formato)
+        db.session.add(produto)
+        db.session.commit()
+        
+        flash('Produto cadastrado com sucesso!', 'success')
+        return redirect(url_for('produtos'))
+    
+    return render_template('produto_form.html')
+
+@app.route('/produtos/<int:id>/editar', methods=['GET', 'POST'])
+def editar_produto(id):
+    produto = Produto.query.get_or_404(id)
+    
+    if request.method == 'POST':
+        produto.nome = request.form['nome']
+        produto.marca = request.form['marca']
+        produto.formato = request.form['formato']
+        
+        db.session.commit()
+        flash('Produto atualizado com sucesso!', 'success')
+        return redirect(url_for('produtos'))
+    
+    return render_template('produto_form.html', produto=produto)
+
+@app.route('/produtos/<int:id>/deletar', methods=['POST'])
+def deletar_produto(id):
+    produto = Produto.query.get_or_404(id)
+    db.session.delete(produto)
+    db.session.commit()
+    flash('Produto deletado com sucesso!', 'success')
+    return redirect(url_for('produtos'))
+
+@app.route('/entradas')
+def entradas():
+    entradas = Entrada.query.order_by(Entrada.data.desc()).all()
+    return render_template('entradas.html', entradas=entradas)
+
+@app.route('/entradas/nova', methods=['GET', 'POST'])
+def nova_entrada():
+    if request.method == 'POST':
+        produto_id = request.form['produto_id']
+        quantidade = float(request.form['quantidade'])
+        data = datetime.strptime(request.form['data'], '%Y-%m-%d').date()
+        observacoes = request.form.get('observacoes', '')
+        
+        entrada = Entrada(
+            produto_id=produto_id,
+            quantidade=quantidade,
+            data=data,
+            observacoes=observacoes
+        )
+        db.session.add(entrada)
+        db.session.commit()
+        
+        flash('Entrada registrada com sucesso!', 'success')
+        return redirect(url_for('entradas'))
+    
+    produtos = Produto.query.all()
+    return render_template('entrada_form.html', produtos=produtos)
+
+@app.route('/saidas')
+def saidas():
+    saidas = Saida.query.order_by(Saida.data.desc()).all()
+    return render_template('saidas.html', saidas=saidas)
+
+@app.route('/saidas/nova', methods=['GET', 'POST'])
+def nova_saida():
+    if request.method == 'POST':
+        produto_id = request.form['produto_id']
+        quantidade = float(request.form['quantidade'])
+        data = datetime.strptime(request.form['data'], '%Y-%m-%d').date()
+        observacoes = request.form.get('observacoes', '')
+        
+        # Verificar se há estoque suficiente
+        produto = Produto.query.get(produto_id)
+        if produto:
+            estoque_atual = produto.calcular_estoque_atual()
+            
+            if quantidade > estoque_atual:
+                flash(f'Estoque insuficiente! Disponível: {estoque_atual} {produto.formato}', 'error')
+                produtos = Produto.query.all()
+                return render_template('saida_form.html', produtos=produtos)
+        
+        saida = Saida(
+            produto_id=produto_id,
+            quantidade=quantidade,
+            data=data,
+            observacoes=observacoes
+        )
+        db.session.add(saida)
+        db.session.commit()
+        
+        flash('Saída registrada com sucesso!', 'success')
+        return redirect(url_for('saidas'))
+    
+    produtos = Produto.query.all()
+    return render_template('saida_form.html', produtos=produtos)
+
+@app.route('/relatorios')
+def relatorios():
+    return render_template('relatorios.html')
+
+@app.route('/relatorio/pdf')
+def gerar_relatorio_pdf():
+    data_inicio = request.args.get('data_inicio')
+    data_fim = request.args.get('data_fim')
+    
+    if not data_inicio or not data_fim:
+        flash('Por favor, informe o período para o relatório', 'error')
+        return redirect(url_for('relatorios'))
+    
+    data_inicio = datetime.strptime(data_inicio, '%Y-%m-%d').date()
+    data_fim = datetime.strptime(data_fim, '%Y-%m-%d').date()
+    
+    # Criar PDF em memória
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4)
+    story = []
+    
+    # Estilos
+    styles = getSampleStyleSheet()
+    
+    # Logo da empresa (se existir)
+    logo_path = os.path.join('static', 'img', 'logo.jpeg')
+    if os.path.exists(logo_path):
+        logo = Image(logo_path, width=2*inch, height=1*inch)
+        story.append(logo)
+        story.append(Spacer(1, 12))
+    
+    # Cabeçalho da empresa
+    empresa_info = [
+        "EMPRESA: JIQUIAGROPECUÁRIA",
+        "ENDEREÇO: AV. PRESIDENTE VARGAS                Nº 201",
+        "CIDADE: JIQUIRIÇÁ                             ESTADO: BAHIA",
+        f"PERÍODO: {data_inicio.strftime('%d/%m/%Y')} até {data_fim.strftime('%d/%m/%Y')}     DATA: {date.today().strftime('%d/%m/%Y')}"
+    ]
+    
+    for info in empresa_info:
+        p = Paragraph(info, styles['Normal'])
+        story.append(p)
+    
+    story.append(Spacer(1, 20))
+    
+    # Título do relatório
+    titulo = Paragraph("RELATÓRIO DE CONTROLE DE ESTOQUE", styles['Title'])
+    story.append(titulo)
+    story.append(Spacer(1, 20))
+    
+    # Dados da tabela
+    produtos = Produto.query.all()
+    data = [['Produto', 'Estoque Inicial', 'Aquisição (Entradas)', 'Venda (Saídas)', 'Estoque Atual']]
+    
+    for produto in produtos:
+        estoque_inicial = produto.calcular_estoque_atual(data_inicio)
+        entradas_periodo = produto.calcular_entradas_periodo(data_inicio, data_fim)
+        saidas_periodo = produto.calcular_saidas_periodo(data_inicio, data_fim)
+        estoque_atual = produto.calcular_estoque_atual(data_fim)
+        
+        data.append([
+            f"{produto.nome} ({produto.marca})",
+            f"{estoque_inicial:.2f} {produto.formato}",
+            f"{entradas_periodo:.2f} {produto.formato}",
+            f"{saidas_periodo:.2f} {produto.formato}",
+            f"{estoque_atual:.2f} {produto.formato}"
+        ])
+    
+    # Criar tabela
+    table = Table(data)
+    table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, 0), 14),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+        ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black)
+    ]))
+    
+    story.append(table)
+    story.append(Spacer(1, 50))
+    
+    # Assinatura
+    assinatura = Paragraph("_________________________________<br/>Assinatura do Responsável", styles['Normal'])
+    story.append(assinatura)
+    
+    # Construir PDF
+    doc.build(story)
+    buffer.seek(0)
+    
+    return send_file(
+        buffer,
+        as_attachment=True,
+        download_name=f'relatorio_estoque_{data_inicio.strftime("%Y%m%d")}_{data_fim.strftime("%Y%m%d")}.pdf',
+        mimetype='application/pdf'
+    )
+
+if __name__ == '__main__':
+    with app.app_context():
+        db.create_all()
+    app.run(host='0.0.0.0', port=5000, debug=True)
