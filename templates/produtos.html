@@ -6,7 +6,7 @@
 <div class="mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-center">
     <div>
         <h2 class="text-3xl font-bold text-gray-800 mb-2">Produtos</h2>
-        <p class="text-gray-600">Gerencie seus produtos</p>
+        <p class="text-gray-600">Gerencie seus produtos e controle de estoque</p>
     </div>
     <a href="{{ url_for('novo_produto') }}" class="mt-4 sm:mt-0 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition duration-200">
         <i class="fas fa-plus mr-2"></i>Novo Produto
@@ -38,16 +38,24 @@
         <table class="min-w-full divide-y divide-gray-200">
             <thead class="bg-gray-50">
                 <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SKU</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Produto</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Marca</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Formato</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Entradas</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Saídas</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estoque Atual</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ações</th>
                 </tr>
             </thead>
             <tbody class="bg-white divide-y divide-gray-200">
                 {% for item in produtos %}
+                {% set total_entradas = item.produto.calcular_total_entradas() %}
+                {% set total_saidas = item.produto.calcular_total_saidas() %}
                 <tr class="hover:bg-gray-50">
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="text-sm font-mono text-gray-900">{{ item.produto.sku or 'N/A' }}</div>
+                    </td>
                     <td class="px-6 py-4 whitespace-nowrap">
                         <div class="text-sm font-medium text-gray-900">{{ item.produto.nome }}</div>
                     </td>
@@ -58,8 +66,18 @@
                         <div class="text-sm text-gray-900">{{ item.produto.formato }}</div>
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap">
-                        <div class="text-sm text-gray-900">
-                            <span class="{% if item.estoque_atual <= 10 %}text-red-600 font-bold{% elif item.estoque_atual <= 50 %}text-yellow-600{% else %}text-green-600{% endif %}">
+                        <div class="text-sm text-green-600 font-medium">
+                            {{ "%.2f"|format(total_entradas) }}
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="text-sm text-red-600 font-medium">
+                            {{ "%.2f"|format(total_saidas) }}
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="text-sm font-bold">
+                            <span class="{% if item.estoque_atual <= 0 %}text-red-600{% elif item.estoque_atual <= 10 %}text-yellow-600{% else %}text-green-600{% endif %}">
                                 {{ "%.2f"|format(item.estoque_atual) }} {{ item.produto.formato }}
                             </span>
                         </div>
@@ -67,12 +85,12 @@
                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                         <div class="flex gap-2">
                             <a href="{{ url_for('editar_produto', id=item.produto.id) }}" 
-                               class="text-blue-600 hover:text-blue-900">
+                               class="text-blue-600 hover:text-blue-900" title="Editar">
                                 <i class="fas fa-edit"></i>
                             </a>
                             <form method="POST" action="{{ url_for('deletar_produto', id=item.produto.id) }}" 
                                   class="inline" onsubmit="return confirm('Tem certeza que deseja deletar este produto?')">
-                                <button type="submit" class="text-red-600 hover:text-red-900">
+                                <button type="submit" class="text-red-600 hover:text-red-900" title="Deletar">
                                     <i class="fas fa-trash"></i>
                                 </button>
                             </form>

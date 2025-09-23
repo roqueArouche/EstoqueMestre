@@ -19,27 +19,7 @@ db.init_app(app)
 
 @app.route('/')
 def index():
-    # Estatísticas para o dashboard
-    total_produtos = Produto.query.count()
-    
-    # Entradas e saídas de hoje
-    hoje = date.today()
-    entradas_hoje = Entrada.query.filter_by(data=hoje).count()
-    saidas_hoje = Saida.query.filter_by(data=hoje).count()
-    
-    # Produtos com estoque baixo (menos de 10 unidades)
-    produtos = Produto.query.all()
-    estoque_baixo = 0
-    for produto in produtos:
-        estoque = produto.calcular_estoque_atual()
-        if 0 < estoque <= 10:
-            estoque_baixo += 1
-    
-    return render_template('dashboard.html', 
-                         total_produtos=total_produtos,
-                         entradas_hoje=entradas_hoje,
-                         saidas_hoje=saidas_hoje,
-                         estoque_baixo=estoque_baixo)
+    return redirect(url_for('produtos'))
 
 @app.route('/produtos')
 def produtos():
@@ -70,7 +50,15 @@ def novo_produto():
         marca = request.form['marca']
         formato = request.form['formato']
         
-        produto = Produto(nome=nome, marca=marca, formato=formato)
+        # Gerar SKU automaticamente
+        ultimo_produto = Produto.query.order_by(Produto.id.desc()).first()
+        if ultimo_produto:
+            proximo_numero = ultimo_produto.id + 1
+        else:
+            proximo_numero = 1
+        sku = f"PRD{proximo_numero:04d}"
+        
+        produto = Produto(sku=sku, nome=nome, marca=marca, formato=formato)
         db.session.add(produto)
         db.session.commit()
         
@@ -87,6 +75,7 @@ def editar_produto(id):
         produto.nome = request.form['nome']
         produto.marca = request.form['marca']
         produto.formato = request.form['formato']
+        # SKU não pode ser editado
         
         db.session.commit()
         flash('Produto atualizado com sucesso!', 'success')
@@ -202,9 +191,10 @@ def gerar_relatorio_pdf():
     # Cabeçalho da empresa
     empresa_info = [
         "EMPRESA: JIQUIAGROPECUÁRIA",
-        "ENDEREÇO: AV. PRESIDENTE VARGAS                Nº 201",
-        "CIDADE: JIQUIRIÇÁ                             ESTADO: BAHIA",
-        f"PERÍODO: {data_inicio.strftime('%d/%m/%Y')} até {data_fim.strftime('%d/%m/%Y')}     DATA: {date.today().strftime('%d/%m/%Y')}"
+        "ENDEREÇO: AV. PRESIDENTE VARGAS Nº 201",
+        "CIDADE: JIQUIRIÇÁ - ESTADO: BAHIA",
+        f"PERÍODO: {data_inicio.strftime('%d/%m/%Y')} até {data_fim.strftime('%d/%m/%Y')}",
+        f"DATA DE EXTRAÇÃO: {date.today().strftime('%d/%m/%Y')}"
     ]
     
     for info in empresa_info:
@@ -220,7 +210,7 @@ def gerar_relatorio_pdf():
     
     # Dados da tabela
     produtos = Produto.query.all()
-    data = [['Produto', 'Estoque Inicial', 'Aquisição (Entradas)', 'Venda (Saídas)', 'Estoque Atual']]
+    data = [['SKU', 'Produto', 'Estoque Inicial', 'Entradas', 'Saídas', 'Estoque Atual']]
     
     for produto in produtos:
         estoque_inicial = produto.calcular_estoque_atual(data_inicio)
@@ -228,25 +218,36 @@ def gerar_relatorio_pdf():
         saidas_periodo = produto.calcular_saidas_periodo(data_inicio, data_fim)
         estoque_atual = produto.calcular_estoque_atual(data_fim)
         
+        # Limitar nome do produto a 25 caracteres para evitar quebra
+        nome_produto = produto.nome[:25] + "..." if len(produto.nome) > 25 else produto.nome
+        
         data.append([
-            f"{produto.nome} ({produto.marca})",
-            f"{estoque_inicial:.2f} {produto.formato}",
-            f"{entradas_periodo:.2f} {produto.formato}",
-            f"{saidas_periodo:.2f} {produto.formato}",
-            f"{estoque_atual:.2f} {produto.formato}"
+            produto.sku or 'N/A',
+            nome_produto,
+            f"{estoque_inicial:.1f}",
+            f"{entradas_periodo:.1f}",
+            f"{saidas_periodo:.1f}",
+            f"{estoque_atual:.1f}"
         ])
     
-    # Criar tabela
-    table = Table(data)
+    # Criar tabela com larguras específicas para responsividade
+    col_widths = [60, 120, 70, 60, 60, 70]  # Larguras em pontos
+    table = Table(data, colWidths=col_widths)
     table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
         ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('ALIGN', (1, 1), (1, -1), 'LEFT'),  # Nome do produto à esquerda
         ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ('FONTSIZE', (0, 0), (-1, 0), 14),
-        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+        ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+        ('FONTSIZE', (0, 0), (-1, 0), 10),
+        ('FONTSIZE', (0, 1), (-1, -1), 9),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 8),
+        ('TOPPADDING', (0, 1), (-1, -1), 4),
+        ('BOTTOMPADDING', (0, 1), (-1, -1), 4),
         ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
-        ('GRID', (0, 0), (-1, -1), 1, colors.black)
+        ('GRID', (0, 0), (-1, -1), 1, colors.black),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
     ]))
     
     story.append(table)

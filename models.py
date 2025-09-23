@@ -5,6 +5,7 @@ db = SQLAlchemy()
 
 class Produto(db.Model):
     id = db.Column(db.Integer, primary_key=True)
+    sku = db.Column(db.String(20), unique=True, nullable=False)
     nome = db.Column(db.String(100), nullable=False)
     marca = db.Column(db.String(100), nullable=False)
     formato = db.Column(db.String(20), nullable=False)  # L, mg, ml, etc
@@ -31,21 +32,29 @@ class Produto(db.Model):
         
         return total_entradas - total_saidas
     
-    def calcular_entradas_periodo(self, data_inicio, data_fim):
+    def calcular_entradas_periodo(self, data_inicio=None, data_fim=None):
         """Calcula total de entradas em um período"""
-        entradas = Entrada.query.filter_by(produto_id=self.id).filter(
-            Entrada.data >= data_inicio,
-            Entrada.data <= data_fim
-        ).all()
+        query = Entrada.query.filter_by(produto_id=self.id)
+        if data_inicio and data_fim:
+            query = query.filter(Entrada.data >= data_inicio, Entrada.data <= data_fim)
+        entradas = query.all()
         return sum([entrada.quantidade for entrada in entradas])
     
-    def calcular_saidas_periodo(self, data_inicio, data_fim):
+    def calcular_saidas_periodo(self, data_inicio=None, data_fim=None):
         """Calcula total de saídas em um período"""
-        saidas = Saida.query.filter_by(produto_id=self.id).filter(
-            Saida.data >= data_inicio,
-            Saida.data <= data_fim
-        ).all()
+        query = Saida.query.filter_by(produto_id=self.id)
+        if data_inicio and data_fim:
+            query = query.filter(Saida.data >= data_inicio, Saida.data <= data_fim)
+        saidas = query.all()
         return sum([saida.quantidade for saida in saidas])
+    
+    def calcular_total_entradas(self):
+        """Calcula total de entradas de todos os tempos"""
+        return self.calcular_entradas_periodo()
+    
+    def calcular_total_saidas(self):
+        """Calcula total de saídas de todos os tempos"""  
+        return self.calcular_saidas_periodo()
 
 class Entrada(db.Model):
     id = db.Column(db.Integer, primary_key=True)
