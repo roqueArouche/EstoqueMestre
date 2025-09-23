@@ -1,4 +1,5 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, send_file
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, send_file, session
+from functools import wraps
 from models import db, Produto, Entrada, Saida
 from datetime import datetime, date
 from reportlab.lib.pagesizes import A4
@@ -16,12 +17,52 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db.init_app(app)
 
+# Credenciais de login
+LOGIN_CREDENTIALS = {
+    'username': 'igor',
+    'password': 'igor2025'
+}
+
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'logged_in' not in session:
+            return redirect(url_for('login'))
+        return f(*args, **kwargs)
+    return decorated_function
+
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+        
+        if (username == LOGIN_CREDENTIALS['username'] and 
+            password == LOGIN_CREDENTIALS['password']):
+            session['logged_in'] = True
+            session['username'] = username
+            flash('Login realizado com sucesso!', 'success')
+            return redirect(url_for('produtos'))
+        else:
+            flash('Credenciais inválidas!', 'error')
+    
+    return render_template('login.html')
+
+@app.route('/logout')
+def logout():
+    session.clear()
+    flash('Logout realizado com sucesso!', 'success')
+    return redirect(url_for('login'))
 
 @app.route('/')
 def index():
+    if 'logged_in' not in session:
+        return redirect(url_for('login'))
     return redirect(url_for('produtos'))
 
 @app.route('/produtos')
+@login_required
 def produtos():
     search = request.args.get('search', '')
     if search:
@@ -44,6 +85,7 @@ def produtos():
     return render_template('produtos.html', produtos=produtos_com_estoque, search=search)
 
 @app.route('/produtos/novo', methods=['GET', 'POST'])
+@login_required
 def novo_produto():
     if request.method == 'POST':
         nome = request.form['nome']
@@ -68,6 +110,7 @@ def novo_produto():
     return render_template('produto_form.html')
 
 @app.route('/produtos/<int:id>/editar', methods=['GET', 'POST'])
+@login_required
 def editar_produto(id):
     produto = Produto.query.get_or_404(id)
     
@@ -84,6 +127,7 @@ def editar_produto(id):
     return render_template('produto_form.html', produto=produto)
 
 @app.route('/produtos/<int:id>/deletar', methods=['POST'])
+@login_required
 def deletar_produto(id):
     produto = Produto.query.get_or_404(id)
     db.session.delete(produto)
@@ -92,11 +136,13 @@ def deletar_produto(id):
     return redirect(url_for('produtos'))
 
 @app.route('/entradas')
+@login_required
 def entradas():
     entradas = Entrada.query.order_by(Entrada.data.desc()).all()
     return render_template('entradas.html', entradas=entradas)
 
 @app.route('/entradas/nova', methods=['GET', 'POST'])
+@login_required
 def nova_entrada():
     if request.method == 'POST':
         produto_id = request.form['produto_id']
@@ -120,11 +166,13 @@ def nova_entrada():
     return render_template('entrada_form.html', produtos=produtos)
 
 @app.route('/saidas')
+@login_required
 def saidas():
     saidas = Saida.query.order_by(Saida.data.desc()).all()
     return render_template('saidas.html', saidas=saidas)
 
 @app.route('/saidas/nova', methods=['GET', 'POST'])
+@login_required
 def nova_saida():
     if request.method == 'POST':
         produto_id = request.form['produto_id']
@@ -158,13 +206,17 @@ def nova_saida():
     return render_template('saida_form.html', produtos=produtos)
 
 @app.route('/relatorios')
+@login_required
 def relatorios():
     return render_template('relatorios.html')
 
 @app.route('/relatorio/pdf')
+@login_required
 def gerar_relatorio_pdf():
     data_inicio = request.args.get('data_inicio')
     data_fim = request.args.get('data_fim')
+    nome_engenheiro = request.args.get('nome_engenheiro', '')
+    registro_engenheiro = request.args.get('registro_engenheiro', '')
     
     if not data_inicio or not data_fim:
         flash('Por favor, informe o período para o relatório', 'error')
@@ -180,13 +232,6 @@ def gerar_relatorio_pdf():
     
     # Estilos
     styles = getSampleStyleSheet()
-    
-    # Logo da empresa (se existir)
-    logo_path = os.path.join('static', 'img', 'logo.jpeg')
-    if os.path.exists(logo_path):
-        logo = Image(logo_path, width=2*inch, height=1*inch)
-        story.append(logo)
-        story.append(Spacer(1, 12))
     
     # Cabeçalho da empresa
     empresa_info = [
@@ -253,8 +298,18 @@ def gerar_relatorio_pdf():
     story.append(table)
     story.append(Spacer(1, 50))
     
-    # Assinatura
-    assinatura = Paragraph("_________________________________<br/>Assinatura do Responsável", styles['Normal'])
+    # Assinatura com informações do engenheiro agrônomo
+    if nome_engenheiro or registro_engenheiro:
+        if nome_engenheiro and registro_engenheiro:
+            assinatura_texto = f"_________________________________<br/>{nome_engenheiro}<br/>Engenheiro Agrônomo - {registro_engenheiro}<br/>Responsável Técnico"
+        elif nome_engenheiro:
+            assinatura_texto = f"_________________________________<br/>{nome_engenheiro}<br/>Engenheiro Agrônomo<br/>Responsável Técnico"
+        else:
+            assinatura_texto = f"_________________________________<br/>Engenheiro Agrônomo - {registro_engenheiro}<br/>Responsável Técnico"
+    else:
+        assinatura_texto = "_________________________________<br/>Assinatura do Responsável Técnico"
+    
+    assinatura = Paragraph(assinatura_texto, styles['Normal'])
     story.append(assinatura)
     
     # Construir PDF
