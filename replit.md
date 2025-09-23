@@ -2,7 +2,7 @@
 
 ## Overview
 
-Sistema completo de controle de estoque para a JIQUIAGROPECUÁRIA, empresa do setor agropecuário. O sistema permite gerenciar produtos, rastrear entradas e saídas do estoque, monitorar níveis atuais de inventário e gerar relatórios PDF profissionais. Inclui dashboard com métricas em tempo real, gestão completa de produtos com busca, e controle abrangente de movimentações com filtros por data e relatórios detalhados.
+Sistema completo de controle de estoque para a JIQUIAGROPECUÁRIA, empresa do setor agropecuário. O sistema permite gerenciar produtos com SKUs automáticos, rastrear entradas e saídas do estoque, monitorar níveis atuais de inventário e gerar relatórios PDF profissionais. Inclui autenticação segura, gestão completa de produtos com busca, controle abrangente de movimentações e relatórios personalizáveis com informações do engenheiro agrônomo responsável.
 
 **Status**: ✅ SISTEMA COMPLETO E FUNCIONANDO
 
@@ -17,41 +17,44 @@ Preferred communication style: Simple, everyday language.
 - **CSS Framework**: Tailwind CSS para design responsivo e estilização moderna
 - **Icons**: Font Awesome para iconografia consistente
 - **Layout Structure**: Template base com herança de blocos para navegação e marca consistentes
-- **Mobile Support**: Design responsivo mobile-first com navegação lateral colapsável
-- **Logo da Empresa**: Integrado no cabeçalho e relatórios PDF
+- **Mobile Support**: Design responsivo mobile-first com navegação lateral colapsável e overlay
+- **Authentication**: Sistema de login integrado com proteção de rotas
+- **User Interface**: Interface limpa sem logo, focada na funcionalidade
 
 ### Backend Architecture
 - **Web Framework**: Flask com roteamento estruturado
 - **ORM**: SQLAlchemy para operações de banco e relacionamentos
 - **Data Models**: Três entidades principais (Produto, Entrada, Saida) com chaves estrangeiras
 - **Business Logic**: Métodos de modelo para cálculo de estoque atual e movimentações por período
-- **PDF Generation**: ReportLab para geração de relatórios com tabelas e marca da empresa
+- **PDF Generation**: ReportLab para geração de relatórios responsivos com informações do engenheiro agrônomo
+- **Authentication**: Sistema de sessão Flask com proteção @login_required em todas as rotas
 - **Validação**: Sistema de validação de estoque antes de registrar saídas
 
 ### Data Storage
 - **Database**: SQLite para persistência local de dados
 - **Schema Design**: 
-  - Tabela de produtos com nome, marca, formato/unidade
+  - Tabela de produtos com SKU automático, nome, marca, formato/unidade
   - Tabelas de entradas e saídas vinculadas a produtos via chaves estrangeiras
   - Rastreamento de timestamps para todas as transações
   - Datas dinâmicas para registros corretos
 - **Stock Calculation**: Cálculo dinâmico baseado no histórico de entradas/saídas
 
 ### Key Features Implemented
-- **Dashboard**: ✅ Métricas em tempo real (total produtos, entradas/saídas diárias, estoque baixo)
-- **Product Management**: ✅ CRUD completo com busca por nome e marca
-- **Stock Movements**: ✅ Rastreamento de entradas e saídas com data e observações
-- **Reporting**: ✅ Geração de PDF com filtro por período e análise detalhada
-- **Responsive Design**: ✅ Abordagem mobile-first com barra lateral colapsável
-- **Logo Integration**: ✅ Logo da JIQUIAGROPECUÁRIA em interfaces e relatórios
+- **Authentication System**: ✅ Login seguro com credenciais igor/igor2025 e proteção de rotas
+- **Product Management**: ✅ CRUD completo com SKUs automáticos (PRD0001...) e busca
+- **Stock Movements**: ✅ Rastreamento de entradas e saídas com validação de estoque
+- **Responsive Design**: ✅ Menu móvel colapsável que não sobrepõe o conteúdo
+- **Professional Reporting**: ✅ PDFs responsivos com campos editáveis para engenheiro agrônomo
 - **Stock Validation**: ✅ Verificação de estoque antes de registrar saídas
+- **User Management**: ✅ Informações do usuário logado e logout no menu lateral
 
 ### Recent Changes
-- **23/09/2025**: Sistema completo implementado e testado
-- **Database Models**: Corrigidos defaults de data para uso dinâmico
-- **PDF Reports**: Implementado com cabeçalho da empresa e logo
-- **Interface**: Sistema responsivo completo com TailwindCSS
-- **Validation**: Sistema de validação de estoque implementado
+- **23/09/2025 - Final Update**: Todas as melhorias implementadas e testadas
+- **Authentication**: Sistema de login completo com proteção de rotas e sessões Flask
+- **Mobile Responsive**: Menu lateral corrigido para recolher sem sobrepor conteúdo
+- **PDF Reports**: Rodapé editável para engenheiro agrônomo, logo removida
+- **Product SKUs**: Códigos automáticos PRD0001 implementados
+- **User Interface**: Interface limpa focada na funcionalidade sem elementos visuais desnecessários
 
 ## External Dependencies
 
@@ -72,7 +75,7 @@ Preferred communication style: Simple, everyday language.
 ### Environment Configuration
 - **SESSION_SECRET**: Variável de ambiente para segurança da sessão Flask
 - **Database URI**: Caminho configurável do banco SQLite
-- **Logo**: Armazenado em static/img/logo.jpeg
+- **Login Credentials**: Sistema configurado com usuário 'igor' e senha 'igor2025'
 
 ## Project Structure
 
@@ -87,13 +90,13 @@ Preferred communication style: Simple, everyday language.
 │   └── img/
 │       └── logo.jpeg     # Logo da empresa
 └── templates/
-    ├── base.html         # Template base com navegação
-    ├── dashboard.html    # Dashboard principal
-    ├── produtos.html     # Listagem de produtos
+    ├── base.html         # Template base com navegação responsiva e login
+    ├── login.html        # Página de autenticação
+    ├── produtos.html     # Listagem de produtos com SKUs
     ├── produto_form.html # Formulário de produtos
     ├── entradas.html     # Listagem de entradas
     ├── entrada_form.html # Formulário de entradas
     ├── saidas.html       # Listagem de saídas
     ├── saida_form.html   # Formulário de saídas
-    └── relatorios.html   # Página de relatórios
+    └── relatorios.html   # Página de relatórios com campos do engenheiro
 ```
