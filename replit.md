@@ -49,6 +49,7 @@ Preferred communication style: Simple, everyday language.
 - **User Management**: ✅ Informações do usuário logado e logout no menu lateral
 
 ### Recent Changes
+- **23/09/2025 - Deployment Fixes**: Sistema preparado para produção com gunicorn e configuração de deploy
 - **23/09/2025 - Final Update**: Todas as melhorias implementadas e testadas
 - **Authentication**: Sistema de login completo com proteção de rotas e sessões Flask
 - **Mobile Responsive**: Menu lateral corrigido para recolher sem sobrepor conteúdo
