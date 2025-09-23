@@ -55,6 +55,11 @@ def logout():
     flash('Logout realizado com sucesso!', 'success')
     return redirect(url_for('login'))
 
+@app.route('/health')
+def health_check():
+    """Health check endpoint for deployment monitoring"""
+    return {'status': 'healthy', 'timestamp': datetime.utcnow().isoformat()}, 200
+
 @app.route('/')
 def index():
     if 'logged_in' not in session:
@@ -323,7 +328,15 @@ def gerar_relatorio_pdf():
         mimetype='application/pdf'
     )
 
-if __name__ == '__main__':
+def create_app():
+    """Application factory for deployment"""
     with app.app_context():
         db.create_all()
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    return app
+
+if __name__ == '__main__':
+    # Development mode only
+    port = int(os.environ.get('PORT', 5000))
+    with app.app_context():
+        db.create_all()
+    app.run(host='0.0.0.0', port=port, debug=False)

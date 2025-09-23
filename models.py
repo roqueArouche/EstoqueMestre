@@ -15,6 +15,13 @@ class Produto(db.Model):
     entradas = db.relationship('Entrada', backref='produto', lazy=True)
     saidas = db.relationship('Saida', backref='produto', lazy=True)
     
+    def __init__(self, sku=None, nome=None, marca=None, formato=None, **kwargs):
+        super(Produto, self).__init__(**kwargs)
+        self.sku = sku
+        self.nome = nome
+        self.marca = marca
+        self.formato = formato
+    
     def __repr__(self):
         return f'<Produto {self.nome}>'
     
@@ -64,6 +71,13 @@ class Entrada(db.Model):
     observacoes = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
+    def __init__(self, produto_id=None, quantidade=None, data=None, observacoes=None, **kwargs):
+        super(Entrada, self).__init__(**kwargs)
+        self.produto_id = produto_id
+        self.quantidade = quantidade
+        self.data = data or date.today()
+        self.observacoes = observacoes
+    
     def __repr__(self):
         return f'<Entrada {self.quantidade}>'
 
@@ -74,6 +88,13 @@ class Saida(db.Model):
     data = db.Column(db.Date, nullable=False, default=lambda: date.today())
     observacoes = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    def __init__(self, produto_id=None, quantidade=None, data=None, observacoes=None, **kwargs):
+        super(Saida, self).__init__(**kwargs)
+        self.produto_id = produto_id
+        self.quantidade = quantidade
+        self.data = data or date.today()
+        self.observacoes = observacoes
     
     def __repr__(self):
         return f'<Saida {self.quantidade}>'
