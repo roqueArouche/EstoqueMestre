@@ -19,7 +19,7 @@
                             class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500">
                         <option value="">Selecione um produto</option>
                         {% for produto in produtos %}
-                        <option value="{{ produto.id }}" {% if saida and saida.produto_id == produto.id %}selected{% endif %}>{{ produto.nome }} ({{ produto.marca }})</option>
+                        <option value="{{ produto.id }}" {% if saida and saida.produto_id == produto.id %}selected{% endif %}>{{ produto.nome }} ({{ produto.formato }}) - {{ produto.marca }}</option>
                         {% endfor %}
                     </select>
                 </div>

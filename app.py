@@ -344,8 +344,9 @@ def gerar_relatorio_pdf():
         saidas_periodo = produto.calcular_saidas_periodo(data_inicio, data_fim)
         estoque_atual = produto.calcular_estoque_atual(data_fim)
         
-        # Limitar nome do produto a 25 caracteres para evitar quebra
-        nome_produto = produto.nome[:25] + "..." if len(produto.nome) > 25 else produto.nome
+        # Limitar nome do produto com formato a 30 caracteres para evitar quebra
+        nome_com_formato = f"{produto.nome} ({produto.formato})"
+        nome_produto = nome_com_formato[:30] + "..." if len(nome_com_formato) > 30 else nome_com_formato
         
         data.append([
             produto.sku or 'N/A',
@@ -357,7 +358,7 @@ def gerar_relatorio_pdf():
         ])
     
     # Criar tabela com larguras específicas para responsividade
-    col_widths = [60, 120, 70, 60, 60, 70]  # Larguras em pontos
+    col_widths = [60, 130, 70, 60, 60, 70]  # Larguras em pontos (aumentou coluna produto para incluir formato)
     table = Table(data, colWidths=col_widths)
     table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
