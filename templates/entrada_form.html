@@ -1,11 +1,11 @@
 {% extends "base.html" %}
 
-{% block page_title %}Nova Entrada{% endblock %}
+{% block page_title %}{{ 'Editar Entrada' if entrada else 'Nova Entrada' }}{% endblock %}
 
 {% block content %}
 <div class="mb-8">
-    <h2 class="text-3xl font-bold text-gray-800 mb-2">Nova Entrada</h2>
-    <p class="text-gray-600">Registre uma nova entrada no estoque</p>
+    <h2 class="text-3xl font-bold text-gray-800 mb-2">{{ 'Editar Entrada' if entrada else 'Nova Entrada' }}</h2>
+    <p class="text-gray-600">{{ 'Edite os dados da entrada no estoque' if entrada else 'Registre uma nova entrada no estoque' }}</p>
 </div>
 
 <div class="max-w-2xl">
@@ -19,7 +19,7 @@
                             class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500">
                         <option value="">Selecione um produto</option>
                         {% for produto in produtos %}
-                        <option value="{{ produto.id }}">{{ produto.nome }} ({{ produto.marca }})</option>
+                        <option value="{{ produto.id }}" {% if entrada and entrada.produto_id == produto.id %}selected{% endif %}>{{ produto.nome }} ({{ produto.marca }})</option>
                         {% endfor %}
                     </select>
                 </div>
@@ -29,14 +29,15 @@
                     <label for="quantidade" class="block text-sm font-medium text-gray-700 mb-2">Quantidade</label>
                     <input type="number" id="quantidade" name="quantidade" step="0.01" min="0.01" required
                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-                           placeholder="Ex: 100.50">
+                           placeholder="Ex: 100.50" {% if entrada %}value="{{ entrada.quantidade }}"{% endif %}>
                 </div>
                 
                 <!-- Data -->
                 <div>
                     <label for="data" class="block text-sm font-medium text-gray-700 mb-2">Data</label>
                     <input type="date" id="data" name="data" required
-                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500">
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                           {% if entrada %}value="{{ entrada.data.strftime('%Y-%m-%d') }}"{% endif %}>
                 </div>
                 
                 <!-- Observações -->
@@ -44,7 +45,7 @@
                     <label for="observacoes" class="block text-sm font-medium text-gray-700 mb-2">Observações</label>
                     <textarea id="observacoes" name="observacoes" rows="3"
                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-                              placeholder="Observações sobre a entrada (opcional)"></textarea>
+                              placeholder="Observações sobre a entrada (opcional)">{% if entrada %}{{ entrada.observacoes or '' }}{% endif %}</textarea>
                 </div>
             </div>
             
@@ -52,7 +53,7 @@
                 <button type="submit" 
                         class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg transition duration-200">
                     <i class="fas fa-save mr-2"></i>
-                    Registrar Entrada
+                    {{ 'Atualizar Entrada' if entrada else 'Registrar Entrada' }}
                 </button>
                 
                 <a href="{{ url_for('entradas') }}" 

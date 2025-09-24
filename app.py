@@ -170,6 +170,33 @@ def nova_entrada():
     produtos = Produto.query.all()
     return render_template('entrada_form.html', produtos=produtos)
 
+@app.route('/entradas/<int:id>/editar', methods=['GET', 'POST'])
+@login_required
+def editar_entrada(id):
+    entrada = Entrada.query.get_or_404(id)
+    
+    if request.method == 'POST':
+        entrada.produto_id = request.form['produto_id']
+        entrada.quantidade = float(request.form['quantidade'])
+        entrada.data = datetime.strptime(request.form['data'], '%Y-%m-%d').date()
+        entrada.observacoes = request.form.get('observacoes', '')
+        
+        db.session.commit()
+        flash('Entrada atualizada com sucesso!', 'success')
+        return redirect(url_for('entradas'))
+    
+    produtos = Produto.query.all()
+    return render_template('entrada_form.html', produtos=produtos, entrada=entrada)
+
+@app.route('/entradas/<int:id>/deletar', methods=['POST'])
+@login_required
+def deletar_entrada(id):
+    entrada = Entrada.query.get_or_404(id)
+    db.session.delete(entrada)
+    db.session.commit()
+    flash('Entrada deletada com sucesso!', 'success')
+    return redirect(url_for('entradas'))
+
 @app.route('/saidas')
 @login_required
 def saidas():
@@ -209,6 +236,55 @@ def nova_saida():
     
     produtos = Produto.query.all()
     return render_template('saida_form.html', produtos=produtos)
+
+@app.route('/saidas/<int:id>/editar', methods=['GET', 'POST'])
+@login_required
+def editar_saida(id):
+    saida = Saida.query.get_or_404(id)
+    
+    if request.method == 'POST':
+        produto_id = request.form['produto_id']
+        nova_quantidade = float(request.form['quantidade'])
+        data = datetime.strptime(request.form['data'], '%Y-%m-%d').date()
+        observacoes = request.form.get('observacoes', '')
+        
+        # Verificar se há estoque suficiente considerando a edição
+        produto = Produto.query.get(produto_id)
+        if produto:
+            estoque_atual = produto.calcular_estoque_atual()
+            
+            # Se o produto mudou, calcular estoque sem adicionar quantidade antiga
+            # Se o produto é o mesmo, adicionar a quantidade antiga de volta
+            if int(produto_id) == saida.produto_id:
+                estoque_disponivel = estoque_atual + saida.quantidade
+            else:
+                estoque_disponivel = estoque_atual
+            
+            if nova_quantidade > estoque_disponivel:
+                flash(f'Estoque insuficiente! Disponível: {estoque_disponivel} {produto.formato}', 'error')
+                produtos = Produto.query.all()
+                return render_template('saida_form.html', produtos=produtos, saida=saida)
+        
+        saida.produto_id = produto_id
+        saida.quantidade = nova_quantidade
+        saida.data = data
+        saida.observacoes = observacoes
+        
+        db.session.commit()
+        flash('Saída atualizada com sucesso!', 'success')
+        return redirect(url_for('saidas'))
+    
+    produtos = Produto.query.all()
+    return render_template('saida_form.html', produtos=produtos, saida=saida)
+
+@app.route('/saidas/<int:id>/deletar', methods=['POST'])
+@login_required
+def deletar_saida(id):
+    saida = Saida.query.get_or_404(id)
+    db.session.delete(saida)
+    db.session.commit()
+    flash('Saída deletada com sucesso!', 'success')
+    return redirect(url_for('saidas'))
 
 @app.route('/relatorios')
 @login_required
