@@ -335,7 +335,7 @@ def create_app():
     return app
 
 if __name__ == '__main__':
-    # Development mode only
+    # Development mode only - for production use gunicorn
     port = int(os.environ.get('PORT', 5000))
     with app.app_context():
         db.create_all()
