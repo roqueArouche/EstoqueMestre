@@ -12,8 +12,19 @@ import io
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SESSION_SECRET', 'dev-secret-key')
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///estoque.db'
+
+# Database configuration with fallback
+database_url = os.environ.get('DATABASE_URL')
+if not database_url:
+    raise RuntimeError("DATABASE_URL environment variable is required. Please set up a PostgreSQL database.")
+
+app.config['SQLALCHEMY_DATABASE_URI'] = database_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+# PostgreSQL connection configuration for reliability
+app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
+    "pool_recycle": 300,
+    "pool_pre_ping": True,
+}
 
 db.init_app(app)
 
@@ -408,12 +419,16 @@ def gerar_relatorio_pdf():
 def create_app():
     """Application factory for deployment"""
     with app.app_context():
+        # Create all tables in PostgreSQL
         db.create_all()
+        print("Database tables created successfully")
     return app
 
 if __name__ == '__main__':
     # Development mode only - for production use gunicorn
     port = int(os.environ.get('PORT', 5000))
     with app.app_context():
+        # Create all tables in PostgreSQL
         db.create_all()
+        print("Database tables created successfully")
     app.run(host='0.0.0.0', port=port, debug=False)
